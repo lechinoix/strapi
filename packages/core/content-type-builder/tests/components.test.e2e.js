@@ -38,14 +38,14 @@ describe('Content Type Builder - Components', () => {
           details: {
             errors: [
               {
-                message: 'name.required',
-                name: 'ValidationError',
-                path: ['component', 'name'],
-              },
-              {
                 message: 'attributes.required',
                 name: 'ValidationError',
                 path: ['component', 'attributes'],
+              },
+              {
+                message: 'name.required',
+                name: 'ValidationError',
+                path: ['component', 'name'],
               },
               {
                 message: 'icon.required',
