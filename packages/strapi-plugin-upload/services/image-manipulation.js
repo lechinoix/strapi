@@ -30,14 +30,16 @@ const resizeTo = (buffer, options) =>
     .catch(() => null);
 
 const generateThumbnail = async file => {
-  if (!(await canBeProccessed(file.buffer))) {
+  const fileBuffer = convertToProcessableFormat(file.buffer);
+
+  if (!(await canBeProccessed(fileBuffer))) {
     return null;
   }
 
-  const { width, height } = await getDimensions(file.buffer);
+  const { width, height } = await getDimensions(fileBuffer);
 
   if (width > THUMBNAIL_RESIZE_OPTIONS.width || height > THUMBNAIL_RESIZE_OPTIONS.height) {
-    const newBuff = await resizeTo(file.buffer, THUMBNAIL_RESIZE_OPTIONS);
+    const newBuff = await resizeTo(fileBuffer, THUMBNAIL_RESIZE_OPTIONS);
 
     if (newBuff) {
       const { width, height, size } = await getMetadatas(newBuff);
@@ -65,16 +67,18 @@ const optimize = async buffer => {
     autoOrientation = false,
   } = await strapi.plugins.upload.services.upload.getSettings();
 
-  if (!sizeOptimization || !(await canBeProccessed(buffer))) {
-    return { buffer };
+  const fileBuffer = convertToProcessableFormat(buffer);
+
+  if (!sizeOptimization || !(await canBeProccessed(fileBuffer))) {
+    return { buffer: fileBuffer };
   }
 
-  const sharpInstance = autoOrientation ? sharp(buffer).rotate() : sharp(buffer);
+  const sharpInstance = autoOrientation ? sharp(fileBuffer).rotate() : sharp(fileBuffer);
 
   return sharpInstance
     .toBuffer({ resolveWithObject: true })
     .then(({ data, info }) => {
-      const output = buffer.length < data.length ? buffer : data;
+      const output = fileBuffer.length < data.length ? fileBuffer : data;
 
       return {
         buffer: output,
@@ -85,7 +89,7 @@ const optimize = async buffer => {
         },
       };
     })
-    .catch(() => ({ buffer }));
+    .catch(() => ({ buffer: fileBuffer }));
 };
 
 const DEFAULT_BREAKPOINTS = {
@@ -157,6 +161,17 @@ const canBeProccessed = async buffer => {
   const { format } = await getMetadatas(buffer);
   return format && formatsToProccess.includes(format);
 };
+
+const formatsToConvert = ['heif', 'heic']
+const convertToProcessableFormat = async buffer => {
+  const { format } = await getMetadatas(buffer);
+  format && formatsToConvert.includes(format)
+    ? sharp(buffer)
+      .jpeg({ quality: 100 })
+      .toBuffer()
+      .catch(() => null)
+    : buffer;
+}
 
 module.exports = {
   getDimensions,
